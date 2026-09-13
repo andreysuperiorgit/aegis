@@ -1,0 +1,47 @@
+{
+  "chain": "base",
+  "mint": "0xB095274743941e953c746F9C228DA9c18Bb6ec29",
+  "timestamp": 1726012800000,
+  "score": 14,
+  "verdict": "DANGER",
+  "breakdown": {
+    "mintAuthority": 0,
+    "freezeAuthority": 0,
+    "topHolderConc": 0,
+    "bundleDetected": 0,
+    "lpStatus": 7,
+    "metadataFlags": 7
+  },
+  "mintAuthorityRevoked": false,
+  "freezeAuthorityRevoked": false,
+  "topHolderPercent": 0.42,
+  "bundleDetected": true,
+  "lpBurnPercent": 0.5,
+  "metadataWarnings": [
+    "Has: mint(address,uint256)"
+  ],
+  "details": {
+    "name": "LAPTOP",
+    "symbol": "LAPTOP",
+    "supply": "1000000000000000000000000000",
+    "decimals": 18,
+    "topHolders": [
+      { "address": "0x1234...5678", "amount": "100000000000000000000000000", "percent": "10.00%" },
+      { "address": "0xabcd...ef01", "amount": "42500000000000000000000000", "percent": "4.25%" }
+    ]
+  },
+  "grok": {
+    "analysis": "Extremely high risk. Mint authority is active meaning the creator can print unlimited tokens. Freeze functions detected in bytecode. Top wallet holds 10% of supply with evidence of pre-launch allocation to market makers. Liquidity is paper-thin relative to the fully diluted valuation.",
+    "recommendation": "AVOID",
+    "confidence": "HIGH",
+    "redFlags": [
+      "Active mint authority",
+      "Freeze/pause functions in contract",
+      "42.5M tokens pre-allocated to insider wallet",
+      "$48K liquidity backing $144B FDV",
+      "Bundled transactions at launch"
+    ],
+    "greenFlags": [],
+    "model": "grok-4.1-fast"
+  }
+}

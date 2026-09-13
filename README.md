@@ -1,326 +1,239 @@
-# ◆ AEGIS
+<div align="center">
 
-**Multi-chain scam filter + smart sniper for Solana (Pump.fun), Robinhood Chain (Pons V2), and Base (Clanker)**
+![AEGIS Banner](assets/banner.png)
 
-Enter a contract address or monitor new launches in real time — AEGIS scans for bundles, honeypots, hidden mint, holder concentration, gives a safety score 0–100, and can auto-snipe only "clean" tokens.
+<h1 align="center">AEGIS</h1>
 
----
+<p align="center"><b>Multi-chain scam filter + smart sniper.</b> Scans tokens. Catches rugs. Snipes clean launches.</p>
 
-## Why AEGIS Exists
+<p align="center">
+<a href="#-start-locally">Install</a> · <a href="#-how-it-works">Docs</a> · <a href="#-api">API</a> · <a href="CONTRIBUTING.md">Contribute</a>
+</p>
 
-The numbers tell the story:
+[![License: MIT](https://img.shields.io/badge/License-MIT-2563eb?style=flat-square)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-≥18-4ade80?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Chains](https://img.shields.io/badge/Chains-Solana%20·%20Robinhood%20·%20Base-60a5fa?style=flat-square)]()
+[![AI](https://img.shields.io/badge/AI-Grok%20by%20xAI-f59e0b?style=flat-square)]()
 
-- **Pons V2** launched 207,893 tokens in 32 days on Robinhood Chain. Only 1.55% graduated to Uniswap. **66.8% of wallets lost money.**
-- **$LAPTOP** (Hunter Biden's memecoin) hit $199 and crashed to $0.87 within 90 minutes on September 9, 2026 — a 99.6% drop. Sniper bots and thin liquidity ($48K backing a $144B FDV) wiped out thousands of traders. 80% of LAPTOP buyers lost money.
-- On Solana, **Pump.fun** has the same pattern: thousands of daily launches, most are rugs, bundles, or honeypots.
-
-AEGIS is a local tool that sits between you and these launchpads. It catches what your eyes can't in the 30 seconds before everyone else apes in.
-
----
-
-## Features
-
-- **Token Scanner** — paste any CA, get a full safety breakdown with score 0–100
-- **Live Monitor** — real-time stream of new Pump.fun and Pons V2 launches with auto-scan
-- **Multi-chain** — Solana + Robinhood Chain from one dashboard
-- **6 On-chain Checks** — mint authority, freeze authority, holder concentration, bundle detection, LP status, metadata flags
-- **RugCheck Integration** — optional enhanced scanning via RugCheck API
-- **Auto-Sniper** — buy tokens that pass your score threshold via Jupiter (Solana) or Uniswap V4 (Robinhood Chain). Disabled by default.
-- **Grok AI Analysis** — optional xAI Grok integration that reads scan results and gives a human-language risk breakdown with BUY/AVOID/CAUTION recommendation. Free $175/month API credits.
+</div>
 
 ---
 
-## The $LAPTOP Case Study
+AEGIS monitors new token launches on **Solana** (Pump.fun), **Robinhood Chain** (Pons V2), and **Base** (Clanker) in real time. Each token runs through 6 on-chain checks, receives a safety score 0–100, and optionally gets an AI risk analysis via Grok. Tokens above your threshold get auto-sniped through Jupiter or Uniswap.
 
-On September 9, 2026, Hunter Biden launched the $LAPTOP memecoin on Base. Here's what AEGIS would have flagged:
-
-| Check | What happened | AEGIS flag |
-|-------|---------------|------------|
-| Holder concentration | A project wallet received 100M tokens (10% supply) a week before launch | ⛔ DANGER |
-| LP liquidity | $48,000 backing a token that briefly hit $144B FDV | ⛔ DANGER |
-| Insider selling | 42.5M tokens dumped by pre-allocated wallet at open | ⛔ DANGER |
-| Bundle detection | Market makers GSR and Wintermute received tokens days before trading | ⛔ DANGER |
-| Score | Would have been **< 20** — auto-skipped by sniper | ✅ Saved |
-
-Before $LAPTOP even launched on Base, 14+ copycat LAPTOP tokens appeared on **Robinhood Chain**, Solana, TON, and BNB Chain. AEGIS monitors Pons V2 and Pump.fun for exactly this — catching the copycats and the originals alike.
+66.8% of Pons V2 wallets lost money. 80% of $LAPTOP buyers lost money. This tool exists because of that.
 
 ---
 
-## Supported Chains
+## 🔍 How it works
 
-### Solana — Pump.fun
-The original memecoin factory. AEGIS subscribes to the Pump.fun program (`6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`) via Solana WebSocket and parses every new token creation in real time. Swaps via Jupiter API.
+![Pipeline](assets/pipeline.png)
 
-### Robinhood Chain — Pons V2
-The new hotspot. Robinhood Chain is an Arbitrum Orbit L2 (chain ID `4663`) launched July 1, 2026. Pons V2 is the dominant launchpad — 25,000 tokens per day, $544M daily volume, $6M in daily fees. AEGIS listens to the Pons V2 factory contract for `TokenCreated` events and scans each token. Swaps via Uniswap V4.
-
-**Key Pons V2 contracts on Robinhood Chain:**
-
-| Contract | Address |
-|----------|---------|
-| Pons V2 Launch Factory | `0x7ed598bcef8bd9edd8c97a195c6d13f40801ec7e` |
-| Pons V2 Launch Locker | `0x267444d099b10fb5ed7c3cc7b7c767adca574952` |
-| Pons V2 Meme Hook | `0xe5e702641ea86f4ae6cc3cdaed2b886f976be044` |
-| Pons V2 Launch Router | `0xe33e9e479df8802cb0866d5d05258bec4cf62948` |
-| Pons V2 Graduation Executor | `0xc7819b64a1daecd7ec19856d026cb14efbd89046` |
-| Uniswap V4 PoolManager | `0x8366a39cc670b4001a1121b8f6a443a643e40951` |
-| Pons V1 Factory (legacy) | `0xa5aab3f0c6eeadf30ef1d3eb997108e976351feb` |
-
-### Base — Clanker / Aerodrome
-Where $LAPTOP launched and crashed 99.6%. Base is Coinbase's OP Stack L2 (chain ID `8453`). Clanker is the leading AI-powered token launcher — creates standard DEX pairs (no bonding curve), tokens tradeable immediately. Aerodrome is the top DEX. AEGIS monitors Uniswap V3 Factory on Base for new pool creation events and scans each new token. Swaps via Uniswap V3 / Aerodrome.
-
-**$LAPTOP token on Base:** `0xB095274743941e953c746F9C228DA9c18Bb6ec29`
+| Monitor | Scan | Score & Act |
+|:---|:---|:---|
+| **Real-time launch detection** | **6 on-chain checks** | **AI-powered decisions** |
+| Subscribes to Pump.fun, Pons V2, and Uniswap V3 Factory via WebSocket. Every new token caught within seconds. | Checks mint authority, freeze authority, holder concentration, bundle detection, LP lock status, and metadata flags. | Weighted score 0–100. Grok AI gives a plain-language risk breakdown. Auto-sniper buys only tokens above your threshold. |
 
 ---
 
-## Architecture
+## ⛓️ Chains
 
+| Chain | Launchpad | DEX | Chain ID |
+|:---|:---|:---|:---|
+| **Solana** | Pump.fun | Jupiter | — |
+| **Robinhood Chain** | Pons V2 | Uniswap V4 | 4663 |
+| **Base** | Clanker / Aerodrome | Uniswap V3 | 8453 |
+
+---
+
+## 🛡️ Features
+
+![Features](assets/features.png)
+
+| # | Check | Weight | Detects |
+|:---:|:---|:---:|:---|
+| 1 | Mint authority | 20 | Creator can print unlimited tokens |
+| 2 | Freeze authority | 15 | Creator can freeze your wallet (honeypot) |
+| 3 | Holder concentration | 20 | Top 10 wallets hold too much supply |
+| 4 | Bundle detection | 20 | Coordinated first buys from related wallets |
+| 5 | LP status | 15 | Liquidity not locked or burned |
+| 6 | Metadata flags | 10 | Suspicious name, supply, or contract code |
+
+Score **80+** → relatively clean · **60–79** → caution · **40–59** → warning · **Below 40** → danger
+
+---
+
+## ⛔ The $LAPTOP case
+
+![Case Study](assets/casestudy.png)
+
+September 9, 2026. Hunter Biden launched $LAPTOP on Base. It hit $199, then crashed to $0.87 in 90 minutes. $48K liquidity backing a $144B FDV. 80% of buyers lost money.
+
+AEGIS would have scored it **below 20** and auto-skipped.
+
+| What happened | AEGIS flag |
+|:---|:---|
+| 100M tokens (10% supply) sent to project wallet before launch | ⛔ Holder concentration: DANGER |
+| $48K liquidity at $144B fully diluted valuation | ⛔ LP status: DANGER |
+| 42.5M tokens dumped by insider wallet at open | ⛔ Bundle detection: DANGER |
+| Market makers received tokens days before public trading | ⛔ Insider allocation |
+
+---
+
+## 🤖 Grok AI
+
+Optional. After each scan, results go to xAI's Grok for a plain-language risk analysis: what's wrong, what's right, BUY / CAUTION / AVOID with red and green flags.
+
+Free $175/month API credits from xAI. Each scan costs ~$0.0001.
+
+<details>
+<summary>Example output for $LAPTOP</summary>
+
+```json
+{
+  "analysis": "Extremely high risk. Mint authority active. Freeze functions in bytecode. Top wallet holds 10% with pre-launch allocation. $48K liquidity backing $144B FDV.",
+  "recommendation": "AVOID",
+  "confidence": "HIGH",
+  "red_flags": ["Active mint authority", "Freeze/pause in contract", "42.5M tokens pre-allocated", "$48K vs $144B FDV"],
+  "green_flags": []
+}
 ```
-┌───────────────────────────────────────────────────┐
-│  Frontend — React (localhost:3000)                          │
-│  Manual scan │ Live feed │ Score details │ Snipe controls   │
-└────────────────────┬───────────────────────────────────────┘
-                     │ WebSocket + REST
-┌────────────────────┴───────────────────────────────────────┐
-│  Backend — Node.js + Express (localhost:3001)               │
-│                                                             │
-│  ┌──────────────┐   ┌──────────────┐   ┌───────────────┐   │
-│  │ Monitor      │ → │ Scanner      │ → │ Score Engine  │   │
-│  │ • Solana     │   │ • Solana     │   │ 0–100         │   │
-│  │ • Robinhood  │   │ • Robinhood  │   └───────┬───────┘   │
-│  │ • Base       │   │ • Base       │           ↓           │
-│  └──────────────┘   │ • RugCheck   │   ┌───────────────┐   │
-│                     └──────────────┘   │ Sniper        │   │
-│                                        │ • Jupiter     │   │
-│                                        │ • Uniswap V4  │   │
-│                                        │ • Aerodrome   │   │
-│                                        └───────────────┘   │
-└────────────────────────────────────────────────────────────┘
-       ↑              ↑              ↑             ↑
-  Solana RPC    Robinhood RPC    Base RPC    RugCheck API
-  (Pump.fun)    (Pons V2)       (Clanker)
-```
+</details>
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org) ≥ 18
-- npm (comes with Node.js)
-
-### 1. Clone
+## 🚀 Start locally
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/aegis.git
+# Clone
+git clone https://github.com/andreysuperiorgit/aegis.git
 cd aegis
-```
 
-### 2. Install
-
-```bash
+# Install
 npm install
 cd client && npm install && cd ..
-```
 
-### 3. Configure
-
-```bash
+# Configure
 cp .env.example .env
-```
 
-The defaults work out of the box — free public RPCs for both Solana and Robinhood Chain. Edit `.env` for paid RPCs or to enable the sniper.
-
-### 4. Run
-
-```bash
+# Run
 npm run dev
 ```
 
-Open **http://localhost:3000** in your browser.
-
-### 5. Scan a token
-
-Paste any Solana or Robinhood Chain contract address into the scanner and hit Scan. You'll see the safety score and a breakdown of all 6 checks.
+Open **http://localhost:3000** and paste any contract address.
 
 ---
 
-## Safety Checks
+## 📡 API
 
-| # | Check | Weight | What it catches |
-|---|-------|--------|-----------------|
-| 1 | Mint Authority | 20 | **Hidden mint** — creator can print unlimited tokens and dump |
-| 2 | Freeze Authority | 15 | **Honeypot** — creator can freeze your wallet, you can't sell |
-| 3 | Holder Concentration | 20 | **Whale risk** — top 10 wallets control too much of supply |
-| 4 | Bundle Detection | 20 | **Dev snipe** — first buys are coordinated wallets (Jito bundles on Solana, same-block buys on EVM) |
-| 5 | LP Status | 15 | **Rug pull** — liquidity not locked or burned after graduation |
-| 6 | Metadata Flags | 10 | Suspicious name, symbol, supply, or missing metadata |
+```bash
+# Scan a Solana token
+curl http://localhost:3001/api/scan/solana/TOKEN_ADDRESS
 
-**Score = 100 minus penalties.** 80+ is relatively clean. Below 40 is high risk. No score guarantees safety.
+# Scan a Robinhood Chain token
+curl http://localhost:3001/api/scan/robinhood/0xTOKEN
 
----
+# Scan a Base token
+curl http://localhost:3001/api/scan/base/0xTOKEN
 
-## How Monitoring Works
-
-### Solana (Pump.fun)
-
-AEGIS connects to Solana's WebSocket RPC and uses `logsSubscribe` filtered to the Pump.fun program. Every token creation transaction is parsed in real time. For faster detection, configure a Yellowstone gRPC endpoint (Helius, Shyft, Triton).
-
-### Robinhood Chain (Pons V2)
-
-AEGIS connects to Robinhood Chain's RPC (`rpc.mainnet.chain.robinhood.com`, chain ID 4663) and uses standard EVM `eth_subscribe` to filter for `TokenCreated` events from the Pons V2 factory at `0x7ed5...`. Since Robinhood Chain is Arbitrum Orbit, all standard Ethereum tooling (ethers.js, viem, Hardhat) works out of the box.
-
-Pons V2 supports custom quote assets — tokens can be paired against ETH, USDG, cbBTC, or even **tokenized stocks** (NVDA, AAPL, TSLA). AEGIS handles all pair types.
-
----
-
-## API
+# Start monitoring
+curl -X POST http://localhost:3001/api/monitor/start \
+  -H "Content-Type: application/json" \
+  -d '{"chain":"solana"}'
+```
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/scan/solana/:address` | Scan a Solana token |
-| `GET` | `/api/scan/robinhood/:address` | Scan a Robinhood Chain token |
-| `GET` | `/api/scan/base/:address` | Scan a Base token |
-| `GET` | `/api/monitor/status` | Monitor status for both chains |
-| `POST` | `/api/monitor/start` | Start monitoring (`{ "chain": "solana" \| "robinhood" }`) |
-| `POST` | `/api/monitor/stop` | Stop monitoring |
-| `POST` | `/api/snipe` | Manual snipe trigger (requires `SNIPER_ENABLED=true`) |
-| `WS` | `/ws` | Live feed — new tokens, scores, monitor events |
+|:---|:---|:---|
+| GET | `/api/scan/solana/:address` | Scan Solana token |
+| GET | `/api/scan/robinhood/:address` | Scan Robinhood Chain token |
+| GET | `/api/scan/base/:address` | Scan Base token |
+| GET | `/api/monitor/status` | Monitor status |
+| POST | `/api/monitor/start` | Start chain monitor |
+| POST | `/api/monitor/stop` | Stop chain monitor |
+| WS | `/ws` | Live event stream |
 
 ---
 
-## Project Structure
+## 📂 Project layout
 
 ```
 aegis/
 ├── src/
-│   ├── index.js                    # Entry point
-│   ├── monitors/
-│   │   ├── solana.monitor.js       # Pump.fun WebSocket listener
-│   │   ├── robinhood.monitor.js    # Pons V2 event listener
-│   │   └── base.monitor.js        # Clanker / Uniswap V3 pool events
-│   ├── scanners/
-│   │   ├── solana.scanner.js       # Solana on-chain checks
-│   │   ├── robinhood.scanner.js    # Robinhood Chain on-chain checks
-│   │   ├── base.scanner.js        # Base on-chain checks
-│   │   └── rugcheck.js             # RugCheck API integration
+│   ├── index.js                 Entry point
 │   ├── ai/
-│   │   └── grok.js                 # xAI Grok risk analysis
+│   │   └── grok.js              xAI Grok risk analysis
+│   ├── monitors/
+│   │   ├── solana.monitor.js    Pump.fun — logsSubscribe
+│   │   ├── robinhood.monitor.js Pons V2 — TokenCreated events
+│   │   └── base.monitor.js      Clanker — Uniswap V3 PoolCreated
+│   ├── scanners/
+│   │   ├── solana.scanner.js    SPL token checks
+│   │   ├── robinhood.scanner.js EVM checks (owner, bytecode, holders)
+│   │   ├── base.scanner.js      EVM checks for Base
+│   │   └── rugcheck.js          RugCheck API
 │   ├── sniper/
-│   │   ├── jupiter.sniper.js       # Solana swaps via Jupiter
-│   │   └── uniswap.sniper.js       # Robinhood swaps via Uniswap V4
+│   │   ├── jupiter.sniper.js    Solana swaps via Jupiter
+│   │   └── uniswap.sniper.js    EVM swaps via Uniswap V4
 │   ├── api/
-│   │   └── server.js               # Express + WebSocket server
+│   │   └── server.js            Express + WebSocket server
 │   └── utils/
-│       ├── constants.js            # Addresses, weights, thresholds
-│       ├── score.js                # Safety score calculator
-│       └── logger.js               # Structured logging
+│       ├── constants.js         Contract addresses, weights
+│       ├── score.js             Score calculator
+│       └── logger.js            Colored logging
 ├── client/
 │   ├── src/
-│   │   ├── App.jsx                 # Dashboard UI
-│   │   ├── components/             # React components
-│   │   ├── hooks/                  # useWebSocket, etc.
-│   │   └── styles/                 # CSS
-│   ├── index.html
-│   └── package.json
-├── .env.example
-├── .gitignore
-├── package.json
-└── README.md
+│   │   ├── App.jsx              Dashboard — scan + live feed
+│   │   ├── hooks/               useWebSocket
+│   │   └── styles/              Dark theme
+│   └── vite.config.js           Dev server + proxy
+├── assets/                      Banner, pipeline, features, case study
+├── examples/                    Sample scan outputs
+└── ...config files
 ```
 
 ---
 
-## RPC Providers
+## ⚙️ Configuration
 
-The free public RPCs work for manual scanning. For live monitoring, you need a paid RPC to avoid dropped connections and rate limits.
-
-| Provider | Chains | Pricing | Notes |
-|----------|--------|---------|-------|
-| [Helius](https://helius.dev) | Solana | Free tier / $50+/mo | Yellowstone gRPC, fastest Pump.fun detection |
-| [QuickNode](https://quicknode.com) | Solana + Robinhood | $50+/mo | Supports both chains, Metis Jupiter endpoint |
-| [Chainstack](https://chainstack.com) | Robinhood | Free tier / paid | Official Robinhood Chain integration partner |
-| [Alchemy](https://alchemy.com) | Robinhood | Free tier / paid | Full archive node access |
-
----
-
-## Robinhood Chain Resources
-
-- **RPC endpoint**: `https://rpc.mainnet.chain.robinhood.com`
-- **WebSocket**: `wss://rpc.mainnet.chain.robinhood.com`
-- **Chain ID**: `4663` (mainnet) / `46630` (testnet)
-- **Explorer**: [robinhoodchain.blockscout.com](https://robinhoodchain.blockscout.com)
-- **Developer docs**: [docs.robinhood.com/chain](https://docs.robinhood.com/chain)
-- **Gas token**: ETH
-- **DEX**: Uniswap V4 (PoolManager: `0x8366a39cc670b4001a1121b8f6a443a643e40951`)
-- **Other launchpads**: Pools.trade, hood.fun, Flap
-
-## Grok AI Integration
-
-AEGIS can optionally send scan results to **xAI's Grok** for AI-powered risk analysis. After each scan, Grok reads the on-chain data and returns:
-
-- **Plain-language analysis** — what's wrong (or right) with this token
-- **Recommendation** — BUY / CAUTION / AVOID
-- **Red flags & green flags** — specific concerns and positive signals
-
-### Setup
-
-1. Get a free API key at [console.x.ai](https://console.x.ai) — $175/month in free credits included
-2. Add to your `.env`: `XAI_API_KEY=xai-your-key-here`
-3. That's it. The next scan will include a Grok analysis panel.
-
-Default model is `grok-4.1-fast` ($0.20/M tokens — cheapest). Each scan uses ~500 tokens ≈ $0.0001. Your free credits cover ~1.75 million scans per month.
+| Variable | Required | Default | Description |
+|:---|:---:|:---|:---|
+| `SOLANA_RPC_URL` | ✓ | Public RPC | Solana HTTP endpoint |
+| `SOLANA_WS_URL` | ✓ | Public WS | Solana WebSocket |
+| `ROBINHOOD_RPC_URL` | — | Public RPC | Robinhood Chain (4663) |
+| `BASE_RPC_URL` | — | Public RPC | Base (8453) |
+| `XAI_API_KEY` | — | — | Grok AI key ([console.x.ai](https://console.x.ai)) |
+| `SNIPER_ENABLED` | — | `false` | ⚠️ Uses real funds |
+| `PORT` | — | `3001` | Server port |
 
 ---
 
-## Base Resources
+## 🗺️ Roadmap
 
-- **RPC endpoint**: `https://mainnet.base.org`
-- **Chain ID**: `8453`
-- **Explorer**: [basescan.org](https://basescan.org)
-- **Gas token**: ETH
-- **Launchpads**: Clanker, Virtuals Protocol, Zora
-- **DEXes**: Aerodrome, Uniswap V3
-- **Uniswap V3 Factory**: `0x33128a8fC17869897dcE68Ed026d694621f6FDfD`
-
----
-
-## Roadmap
-
-- [x] Token scanner (Solana)
-- [x] Token scanner (Robinhood Chain)
-- [x] Safety score engine (6 checks)
-- [x] Live monitoring (Pump.fun + Pons V2)
-- [x] React dashboard
-- [x] Jupiter sniper (Solana)
-- [x] Uniswap V4 sniper (Robinhood Chain)
-- [ ] Telegram alerts bot
-- [ ] Advanced bundle detection (Jito bundle ID, funder graph)
-- [ ] Insider wallet tracking (Arkham-style)
-- [ ] Historical score database
-- [ ] Support for TON, BNB Chain
+| Done | Planned |
+|:---|:---|
+| ✅ Token scanner (3 chains) | ⬜ Telegram alerts bot |
+| ✅ Safety score engine | ⬜ Advanced bundle detection (Jito) |
+| ✅ Live monitoring | ⬜ Insider wallet tracking |
+| ✅ React dashboard | ⬜ Historical score database |
+| ✅ Grok AI integration | ⬜ TON, BNB Chain support |
+| ✅ Jupiter sniper | ⬜ Full Uniswap V4 sniper |
 
 ---
 
-## Disclaimer
+## ⚠️ Disclaimer
 
-**This is educational/research software. Use at your own risk.**
-
-- Cryptocurrency trading involves significant financial risk
-- No safety score guarantees a token is legitimate — a score of 100 can rug 5 minutes later
-- The sniper module sends real transactions with real funds when enabled
-- 66.8% of Pons wallets and 80% of $LAPTOP buyers lost money. This tool reduces risk — it doesn't eliminate it
-- Always DYOR
+Educational and research software. Use at your own risk. No safety score guarantees a token is safe. The sniper uses real funds when enabled. DYOR.
 
 ---
 
-## License
+<div align="center">
 
-MIT
+<img src="assets/mascot.jpg" width="100"/>
 
----
+<br/>
 
-## Contributing
+**Built with paranoia.** Licensed under [MIT](LICENSE).
 
-PRs welcome. If you want to add support for a new chain or launchpad, open an issue first so we can discuss the architecture.
+[Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+
+</div>
