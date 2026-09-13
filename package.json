@@ -1,12 +1,17 @@
 {
   "name": "aegis",
   "version": "0.1.0",
-  "description": "Multi-chain scam filter + smart sniper for Solana (Pump.fun), Robinhood Chain (Pons V2) & Base (Clanker)",
+  "description": "Multi-chain scam filter + smart sniper for Solana, Robinhood Chain & Base",
   "type": "module",
   "scripts": {
-    "server": "node src/index.js",
+    "server": "node src/aegis/index.js",
     "client": "cd client && npm run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "scan": "node scripts/scan.js",
+    "monitor": "node scripts/monitor.js",
+    "test": "node --test tests/",
+    "lint": "eslint src/ scripts/",
+    "format": "prettier --write \"src/**/*.js\" \"scripts/**/*.js\"",
     "install:all": "npm install && cd client && npm install"
   },
   "dependencies": {
@@ -17,9 +22,11 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0"
   },
   "engines": { "node": ">=18.0.0" },
   "license": "MIT",
-  "keywords": ["solana","robinhood-chain","base","pump-fun","pons","memecoin","scanner","sniper","scam-filter","grok"]
+  "keywords": ["solana","robinhood-chain","base","pump-fun","pons","memecoin","scanner","sniper","scam-filter","grok","aegis"]
 }
