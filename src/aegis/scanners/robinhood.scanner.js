@@ -6,6 +6,7 @@ import {
   PONS_V2_LOCKER,
   PONS_V2_GRADUATION,
 } from "../utils/constants.js";
+import { enrichScan, recordToken, recordBundle } from "../memory/index.js";
 
 const log = createLogger("robinhood-scanner");
 
@@ -51,6 +52,9 @@ export async function scanRobinhoodToken(tokenAddress, rpcUrl) {
     lpBurnPercent: 0,
     metadataWarnings: [],
     details: {},
+    deployer: null,
+    buyers: [],
+    memory: { adjustment: 0, reasons: [] },
   };
 
   try {
@@ -77,6 +81,7 @@ export async function scanRobinhoodToken(tokenAddress, rpcUrl) {
     try {
       owner = await token.owner();
       results.mintAuthorityRevoked = owner === ethers.ZeroAddress;
+      results.deployer = owner !== ethers.ZeroAddress ? owner : null;
     } catch {
       // No owner() function = likely renounced or not ownable = safer
       results.mintAuthorityRevoked = true;
@@ -148,7 +153,14 @@ export async function scanRobinhoodToken(tokenAddress, rpcUrl) {
 
     // ── 5. Bundle detection ──
     // Check if multiple buys happened in the same block as token creation
-    results.bundleDetected = await detectEvmBundles(provider, tokenAddress);
+    const bundleInfo = await detectEvmBundles(provider, tokenAddress);
+    results.bundleDetected = bundleInfo.detected;
+    results.buyers = bundleInfo.wallets;
+    if (bundleInfo.detected && bundleInfo.wallets.length > 0) {
+      try {
+        recordBundle(tokenAddress, bundleInfo.wallets, bundleInfo.blockNumber, "robinhood");
+      } catch (e) { log.warn(`  Memory bundle write failed: ${e.message}`); }
+    }
     log.info(`  Bundle detected: ${results.bundleDetected ? "YES ✗" : "NO ✓"}`);
 
     // ── 6. LP status ──
@@ -175,10 +187,37 @@ export async function scanRobinhoodToken(tokenAddress, rpcUrl) {
       results.metadataWarnings.push("Suspicious name/symbol keywords");
     }
 
+    // [SECOND BRAIN] Enrich with historical context
+    try {
+      const memory = enrichScan({
+        address: tokenAddress,
+        chain: "robinhood",
+        deployer: results.deployer,
+        buyers: results.buyers,
+      });
+      results.memory = memory;
+      if (memory.adjustment !== 0) {
+        log.info(`  Second Brain: ${memory.adjustment > 0 ? "+" : ""}${memory.adjustment} — ${memory.reasons.join("; ")}`);
+      }
+    } catch (e) {
+      log.warn(`  Second Brain lookup failed: ${e.message}`);
+    }
+
   } catch (err) {
     log.error(`Scan failed: ${err.message}`);
     results.metadataWarnings.push(`Scan error: ${err.message}`);
   }
+
+  // [SECOND BRAIN] Record what we saw for future scans
+  try {
+    recordToken({
+      address: tokenAddress,
+      chain: "robinhood",
+      deployer: results.deployer,
+      score: null,
+      verdict: null,
+    });
+  } catch (e) { log.warn(`  Memory token write failed: ${e.message}`); }
 
   return results;
 }
@@ -186,30 +225,36 @@ export async function scanRobinhoodToken(tokenAddress, rpcUrl) {
 /**
  * Check if multiple transactions interacted with the token
  * in the same block as deployment (= likely coordinated).
+ * Returns { detected, wallets, blockNumber } for memory recording.
  */
 async function detectEvmBundles(provider, tokenAddress) {
   try {
-    // Get the creation transaction by looking at the first internal tx
     const currentBlock = await provider.getBlockNumber();
-    // Look at recent transfer logs for this token
     const filter = {
       address: tokenAddress,
       topics: [ethers.id("Transfer(address,address,uint256)")],
-      fromBlock: currentBlock - 1000, // Last ~1000 blocks
+      fromBlock: currentBlock - 1000,
       toBlock: currentBlock,
     };
 
     const logs = await provider.getLogs(filter);
-    if (logs.length < 3) return false;
+    if (logs.length < 3) return { detected: false, wallets: [], blockNumber: currentBlock };
 
-    // Check if 5+ transfers happened in the same block
     const blockCounts = {};
-    for (const l of logs) {
-      blockCounts[l.blockNumber] = (blockCounts[l.blockNumber] || 0) + 1;
+    for (const l of logs) blockCounts[l.blockNumber] = (blockCounts[l.blockNumber] || 0) + 1;
+    const detected = Object.values(blockCounts).some((count) => count >= 5);
+
+    // Extract 'to' addresses from Transfer logs as first buyers
+    const wallets = [];
+    for (const l of logs.slice(0, 15)) {
+      try {
+        const to = "0x" + l.topics[2].slice(-40);
+        if (!wallets.includes(to) && to !== ethers.ZeroAddress) wallets.push(to);
+      } catch {}
     }
 
-    return Object.values(blockCounts).some((count) => count >= 5);
+    return { detected, wallets, blockNumber: currentBlock };
   } catch {
-    return false;
+    return { detected: false, wallets: [], blockNumber: null };
   }
 }

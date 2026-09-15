@@ -37,7 +37,11 @@ export function calculateScore(checks) {
   const metaPenalty = Math.min((checks.metadataWarnings?.length || 0) * 3, SCORE_WEIGHTS.metadataFlags);
   breakdown.metadataFlags = SCORE_WEIGHTS.metadataFlags - metaPenalty;
 
-  const score = Object.values(breakdown).reduce((a, b) => a + b, 0);
+  const baseScore = Object.values(breakdown).reduce((a, b) => a + b, 0);
+
+  // [SECOND BRAIN] the scanner attaches memory: { adjustment, reasons, ... }
+  const adjustment = checks.memory?.adjustment || 0;
+  const score = Math.max(0, Math.min(100, baseScore + adjustment));
 
   let verdict;
   if (score >= 80) verdict = "SAFE";
@@ -45,5 +49,13 @@ export function calculateScore(checks) {
   else if (score >= 40) verdict = "WARNING";
   else verdict = "DANGER";
 
-  return { score, breakdown, verdict };
+  return {
+    baseScore,
+    memoryAdjustment: adjustment,
+    memoryReasons: checks.memory?.reasons || [],
+    score,
+    finalScore: score,
+    breakdown,
+    verdict,
+  };
 }

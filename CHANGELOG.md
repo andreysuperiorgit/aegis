@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.2.0] — 2026-09-15
+
+### Added — **Second Brain**
+- **AEGIS Memory** — local SQLite-backed intelligence layer that persists across scans
+- Every scan now enriches the score with historical context (deployers, wallets, bundles)
+- Deployer reputation tracking: rug rate, alive tokens, first/last seen
+- Wallet flags: `smart_money`, `known_rugger`, bundle appearances
+- Token lifecycle recording: launched at, verdict, current status (live/rugged/abandoned)
+- Score adjustment range: **±25** on top of the 6 base checks
+- `npm run memory:stats` — top ruggers, smart-money wallets, tracked totals
+- `npm run memory:flag` — manually flag a wallet
+- Scanners now capture `deployer` and `buyers[]` fields for memory enrichment
+- Bundle detection now records participating wallets to memory
+- New env var: `AEGIS_MEMORY_PATH` (default: `data/memory.db`)
+
+### Changed
+- `solana.scanner.js`, `robinhood.scanner.js`, `base.scanner.js` now integrate Memory
+- Scan results include `memory: { adjustment, reasons, deployer, wallets }`
+- Bundle detection returns `{ detected, wallets, blockNumber }` (was `boolean`)
+
+### Dependencies
+- Added `better-sqlite3` (^11.3.0) — the only new runtime dependency
+
 ## [0.1.0] — 2026-09-12
 
 ### Added

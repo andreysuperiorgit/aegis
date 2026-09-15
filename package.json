@@ -1,7 +1,7 @@
 {
   "name": "aegis",
-  "version": "0.1.0",
-  "description": "Multi-chain scam filter + smart sniper for Solana, Robinhood Chain & Base",
+  "version": "0.2.0",
+  "description": "Multi-chain scam filter + smart sniper with Second Brain memory · Solana, Robinhood Chain & Base",
   "type": "module",
   "scripts": {
     "server": "node src/aegis/index.js",
@@ -9,6 +9,8 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "scan": "node scripts/scan.js",
     "monitor": "node scripts/monitor.js",
+    "memory:stats": "node scripts/memory-stats.js",
+    "memory:flag": "node scripts/memory-flag.js",
     "test": "node --test tests/",
     "lint": "eslint src/ scripts/",
     "format": "prettier --write \"src/**/*.js\" \"scripts/**/*.js\"",
@@ -16,6 +18,7 @@
   },
   "dependencies": {
     "@solana/web3.js": "^1.95.0",
+    "better-sqlite3": "^11.3.0",
     "dotenv": "^16.4.0",
     "ethers": "^6.13.0",
     "express": "^4.21.0",
@@ -28,5 +31,19 @@
   },
   "engines": { "node": ">=18.0.0" },
   "license": "MIT",
-  "keywords": ["solana","robinhood-chain","base","pump-fun","pons","memecoin","scanner","sniper","scam-filter","grok","aegis"]
+  "keywords": [
+    "solana",
+    "robinhood-chain",
+    "base",
+    "pump-fun",
+    "pons",
+    "memecoin",
+    "scanner",
+    "sniper",
+    "scam-filter",
+    "grok",
+    "aegis",
+    "second-brain",
+    "memory"
+  ]
 }

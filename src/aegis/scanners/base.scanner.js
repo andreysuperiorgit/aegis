@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { createLogger } from "../utils/logger.js";
 import { BASE_CHAIN_ID } from "../utils/constants.js";
+import { enrichScan, recordToken, recordBundle } from "../memory/index.js";
 
 const log = createLogger("base-scanner");
 
@@ -22,7 +23,6 @@ const DANGEROUS_SELECTORS = {
 
 /**
  * Scan a token on Base (Coinbase L2, OP Stack).
- * Same check structure as Solana/Robinhood scanners.
  */
 export async function scanBaseToken(tokenAddress, rpcUrl) {
   const provider = new ethers.JsonRpcProvider(rpcUrl, {
@@ -36,12 +36,13 @@ export async function scanBaseToken(tokenAddress, rpcUrl) {
     mintAuthorityRevoked: false, freezeAuthorityRevoked: false,
     topHolderPercent: 1.0, bundleDetected: false,
     lpBurnPercent: 0, metadataWarnings: [], details: {},
+    deployer: null, buyers: [],
+    memory: { adjustment: 0, reasons: [] },
   };
 
   try {
     const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
 
-    // ── 1. Basic info ──
     const [name, symbol, totalSupply, decimals] = await Promise.all([
       token.name().catch(() => "Unknown"),
       token.symbol().catch(() => "???"),
@@ -55,21 +56,20 @@ export async function scanBaseToken(tokenAddress, rpcUrl) {
     results.details.decimals = decimals;
     log.info(`  Token: ${name} (${symbol})`);
 
-    // ── 2. Owner check ──
     let owner = null;
     try {
       owner = await token.owner();
       results.mintAuthorityRevoked = owner === ethers.ZeroAddress;
+      results.deployer = owner !== ethers.ZeroAddress ? owner : null;
     } catch {
-      results.mintAuthorityRevoked = true; // no owner() = renounced
+      results.mintAuthorityRevoked = true;
     }
     log.info(`  Owner: ${owner || "renounced"} → ${results.mintAuthorityRevoked ? "REVOKED ✓" : "ACTIVE ✗"}`);
 
-    // ── 3. Dangerous functions (bytecode scan) ──
     const bytecode = await provider.getCode(tokenAddress);
     const foundDangerous = [];
-    for (const [sel, name] of Object.entries(DANGEROUS_SELECTORS)) {
-      if (bytecode.includes(sel.slice(2))) foundDangerous.push(name);
+    for (const [sel, fname] of Object.entries(DANGEROUS_SELECTORS)) {
+      if (bytecode.includes(sel.slice(2))) foundDangerous.push(fname);
     }
 
     results.freezeAuthorityRevoked = !foundDangerous.some(
@@ -85,7 +85,6 @@ export async function scanBaseToken(tokenAddress, rpcUrl) {
       results.metadataWarnings.push(`Has: ${foundDangerous.join(", ")}`);
     }
 
-    // ── 4. Top holders (check deployer + known addresses) ──
     if (totalSupply > 0n) {
       const addressesToCheck = [owner].filter(Boolean);
       let knownHoldings = 0n;
@@ -110,16 +109,18 @@ export async function scanBaseToken(tokenAddress, rpcUrl) {
       log.info(`  Known holders: ${(results.topHolderPercent * 100).toFixed(1)}%`);
     }
 
-    // ── 5. Bundle detection ──
-    results.bundleDetected = await detectEvmBundles(provider, tokenAddress);
+    const bundleInfo = await detectEvmBundles(provider, tokenAddress);
+    results.bundleDetected = bundleInfo.detected;
+    results.buyers = bundleInfo.wallets;
+    if (bundleInfo.detected && bundleInfo.wallets.length > 0) {
+      try {
+        recordBundle(tokenAddress, bundleInfo.wallets, bundleInfo.blockNumber, "base");
+      } catch (e) { log.warn(`  Memory bundle write failed: ${e.message}`); }
+    }
     log.info(`  Bundle: ${results.bundleDetected ? "YES ✗" : "NO ✓"}`);
 
-    // ── 6. LP status ──
-    // Clanker creates standard DEX pairs — LP exists if token is trading.
-    // Check if there's a Uniswap/Aerodrome pool with liquidity.
-    results.lpBurnPercent = 0.5; // TODO: check Aerodrome/Uniswap pool LP lock
+    results.lpBurnPercent = 0.5;
 
-    // ── 7. Metadata flags ──
     const realSupply = Number(totalSupply) / 10 ** decimals;
     if (realSupply > 1e15) results.metadataWarnings.push("Extremely large supply");
     if (name.length > 50) results.metadataWarnings.push("Suspiciously long name");
@@ -127,10 +128,37 @@ export async function scanBaseToken(tokenAddress, rpcUrl) {
       results.metadataWarnings.push("Suspicious keywords in name");
     }
 
+    // [SECOND BRAIN] Enrich with historical context
+    try {
+      const memory = enrichScan({
+        address: tokenAddress,
+        chain: "base",
+        deployer: results.deployer,
+        buyers: results.buyers,
+      });
+      results.memory = memory;
+      if (memory.adjustment !== 0) {
+        log.info(`  Second Brain: ${memory.adjustment > 0 ? "+" : ""}${memory.adjustment} — ${memory.reasons.join("; ")}`);
+      }
+    } catch (e) {
+      log.warn(`  Second Brain lookup failed: ${e.message}`);
+    }
+
   } catch (err) {
     log.error(`Scan failed: ${err.message}`);
     results.metadataWarnings.push(`Scan error: ${err.message}`);
   }
+
+  // [SECOND BRAIN] Record what we saw for future scans
+  try {
+    recordToken({
+      address: tokenAddress,
+      chain: "base",
+      deployer: results.deployer,
+      score: null,
+      verdict: null,
+    });
+  } catch (e) { log.warn(`  Memory token write failed: ${e.message}`); }
 
   return results;
 }
@@ -145,10 +173,21 @@ async function detectEvmBundles(provider, tokenAddress) {
       toBlock: currentBlock,
     };
     const logs = await provider.getLogs(filter);
-    if (logs.length < 3) return false;
+    if (logs.length < 3) return { detected: false, wallets: [], blockNumber: currentBlock };
 
     const blockCounts = {};
     for (const l of logs) blockCounts[l.blockNumber] = (blockCounts[l.blockNumber] || 0) + 1;
-    return Object.values(blockCounts).some(c => c >= 5);
-  } catch { return false; }
+    const detected = Object.values(blockCounts).some(c => c >= 5);
+
+    // Extract 'to' addresses from Transfer logs as buyers
+    const wallets = [];
+    for (const l of logs.slice(0, 15)) {
+      try {
+        const to = "0x" + l.topics[2].slice(-40);
+        if (!wallets.includes(to) && to !== ethers.ZeroAddress) wallets.push(to);
+      } catch {}
+    }
+
+    return { detected, wallets, blockNumber: currentBlock };
+  } catch { return { detected: false, wallets: [], blockNumber: null }; }
 }
