@@ -1,4 +1,5 @@
-import { describe, it, assert } from "node:test";
+import {describe, it} from "node:test";
+import assert from "node:assert/strict";
 import { isGrokEnabled } from "../src/aegis/ai/grok.js";
 
 describe("Grok AI", () => {

@@ -1,7 +1,7 @@
 {
   "name": "aegis",
-  "version": "0.2.0",
-  "description": "Multi-chain scam filter + smart sniper with Second Brain memory · Solana, Robinhood Chain & Base",
+  "version": "0.3.0",
+  "description": "Multi-chain scam filter + smart sniper with Second Brain memory \u00b7 Solana, Robinhood Chain & Base",
   "type": "module",
   "scripts": {
     "server": "node src/aegis/index.js",
@@ -11,10 +11,14 @@
     "monitor": "node scripts/monitor.js",
     "memory:stats": "node scripts/memory-stats.js",
     "memory:flag": "node scripts/memory-flag.js",
-    "test": "node --test tests/",
+    "memory:migrate": "node scripts/memory-migrate.js",
+    "followup": "node scripts/followup.js",
+    "followup:watch": "node scripts/followup.js --watch",
+    "test": "node --test tests/*.test.js",
     "lint": "eslint src/ scripts/",
     "format": "prettier --write \"src/**/*.js\" \"scripts/**/*.js\"",
-    "install:all": "npm install && cd client && npm install"
+    "install:all": "npm install && cd client && npm install",
+    "test:memory": "node --test tests/memory.test.js"
   },
   "dependencies": {
     "@solana/web3.js": "^1.95.0",
@@ -29,7 +33,9 @@
     "eslint": "^9.0.0",
     "prettier": "^3.3.0"
   },
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "license": "MIT",
   "keywords": [
     "solana",

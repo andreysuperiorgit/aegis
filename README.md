@@ -111,6 +111,52 @@ Nothing leaves your machine. No telemetry, no shared database, no analytics ping
 
 ---
 
+## Keeping it honest
+
+A scan tells you what a token looked like at birth. The follow-up job goes
+back at 24h, 72h and 7d and records what actually happened to it.
+
+```sh
+npm run followup                # one pass
+npm run followup -- --dry-run   # show what it would decide
+npm run followup -- --watch     # keep running
+```
+
+This is the part that makes reputation mean anything. With it off,
+`tokens_rugged` never increments, every deployer keeps a neutral record,
+and the memory fills with rows while learning nothing. It runs with the
+server by default.
+
+A token is called rugged when price is 90% off its peak **and** liquidity
+is under $2,000. Either alone is noise. Details and the honest gaps are in
+[`docs/MEMORY.md`](docs/MEMORY.md).
+
+---
+
+## Schema migrations
+
+The database is meant to live for months, so schema changes go through
+versioned migrations rather than a fresh file.
+
+```sh
+npm run memory:migrate -- --status
+```
+
+They run automatically on boot.
+
+---
+
+## Docker
+
+```sh
+docker compose up --build
+```
+
+The memory database lives on a named volume. Mount something on `/data`
+or the run's history dies with the container.
+
+---
+
 ## The idea
 
 Every chain has a block explorer. None of them tell you whether to click buy. None of them tell you the deployer already rugged three tokens this month.
@@ -304,8 +350,12 @@ aegis/
 │   ├── index.js                  the entry point
 │   ├── ai/
 │   │   └── grok.js               xAI risk analysis — optional
+│   ├── jobs/                     ── THE FEEDBACK LOOP ──
+│   │   ├── followup.job.js       what happened to it, 24h / 72h / 7d
+│   │   └── price.source.js       price + liquidity adapter
 │   ├── memory/                   ── SECOND BRAIN ──
-│   │   ├── db.js                 SQLite schema + connection
+│   │   ├── db.js                 SQLite connection
+│   │   ├── migrate.js            versioned schema migrations
 │   │   ├── lookup.js             enrichScan() → adjustment + reasons
 │   │   ├── record.js             recordToken, recordBundle, flagWallet
 │   │   └── index.js              public API
@@ -334,7 +384,9 @@ aegis/
 │   ├── scan.js                   CLI scan
 │   ├── monitor.js                CLI monitor
 │   ├── memory-stats.js           npm run memory:stats
-│   └── memory-flag.js            npm run memory:flag
+│   ├── memory-flag.js            npm run memory:flag
+│   ├── memory-migrate.js         npm run memory:migrate
+│   └── followup.js               npm run followup
 └── assets/                       the images on this page
 ```
 
@@ -352,6 +404,9 @@ SOLANA_WS_URL         ✓          public WS        Solana WebSocket
 ROBINHOOD_RPC_URL     —          public RPC       Robinhood Chain (4663)
 BASE_RPC_URL          —          public RPC       Base (8453)
 AEGIS_MEMORY_PATH     —          data/memory.db   second brain location
+AEGIS_FOLLOWUP        —          on               set "off" to stop the loop
+AEGIS_FOLLOWUP_MINUTES —         30               minutes between passes
+AEGIS_PRICE_SOURCE    —          dexscreener      or "none" for no network
 XAI_API_KEY           —          —                Grok (console.x.ai)
 SNIPER_ENABLED        —          false            ⚠ uses real funds
 PORT                  —          3001             server port
@@ -408,6 +463,8 @@ done                                    planned
 ✓ Jupiter sniper                        ○ full Uniswap V4 sniper
 ✓ second brain (SQLite memory)          ○ TON, BNB Chain support
 ✓ deployer / wallet reputation          ○ GraphQL for memory queries
+✓ follow-up job (24h / 72h / 7d)        ○ Robinhood price feed
+✓ schema migrations                     ○ deployer clustering
 ```
 
 ---

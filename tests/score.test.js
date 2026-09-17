@@ -1,4 +1,5 @@
-import { describe, it, assert } from "node:test";
+import {describe, it} from "node:test";
+import assert from "node:assert/strict";
 import { calculateScore } from "../src/aegis/utils/score.js";
 
 describe("calculateScore", () => {

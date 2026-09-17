@@ -1,0 +1,19 @@
+services:
+  aegis:
+    build: .
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      # keep the database on the volume, not in the container layer
+      AEGIS_MEMORY_PATH: /data/memory.db
+      # the follow-up loop is what teaches the memory; leave it on
+      AEGIS_FOLLOWUP: "on"
+      AEGIS_FOLLOWUP_MINUTES: "30"
+    volumes:
+      - aegis-memory:/data
+    restart: unless-stopped
+
+volumes:
+  aegis-memory:

@@ -13,10 +13,11 @@
  *   AEGIS_MEMORY_PATH — override SQLite file location (default: data/memory.db)
  */
 
-export { initMemory, closeMemory, getDb } from "./db.js";
+export { initMemory, closeMemory, getDb, memoryPath } from "./db.js";
 export { enrichScan, lookupDeployer, lookupWallets } from "./lookup.js";
 export {
   recordToken,
+  recordVerdict,
   recordBundle,
   updateTokenStatus,
   flagWallet,

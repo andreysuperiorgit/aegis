@@ -92,11 +92,21 @@ export function enrichScan(scanResult) {
   const total = dep.adjustment + wal.adjustment;
   const clamped = Math.max(-25, Math.min(25, total));
 
-  const reasons = [dep.reason, wal.reason].filter(Boolean);
+  // Only report what actually moved the score. A neutral lookup
+  // ("new deployer, no history") explains nothing, and listing it beside
+  // a -10 from wallets misattributes the cause.
+  const reasons = [];
+  const notes = [];
+  for (const part of [dep, wal]) {
+    if (!part.reason) continue;
+    if (part.adjustment === 0) notes.push(part.reason);
+    else reasons.push(part.reason);
+  }
 
   return {
     adjustment: clamped,
     reasons,
+    notes,
     deployer: dep.stats,
     wallets: wal.breakdown,
   };

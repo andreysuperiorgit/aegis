@@ -11,19 +11,30 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH =
-  process.env.AEGIS_MEMORY_PATH ||
-  path.join(__dirname, "../../../data/memory.db");
+const DEFAULT_PATH = path.join(__dirname, "../../../data/memory.db");
 
 let db = null;
+
+/**
+ * Where the database lives.
+ *
+ * Resolved on every call rather than once at import time. A module body
+ * runs before the importing file's own statements, so reading the env
+ * var at load would ignore anything set programmatically and silently
+ * write to the default path instead.
+ */
+export function memoryPath() {
+  return process.env.AEGIS_MEMORY_PATH || DEFAULT_PATH;
+}
 
 export function initMemory() {
   if (db) return db;
 
-  const dir = path.dirname(DB_PATH);
+  const dbPath = memoryPath();
+  const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-  db = new Database(DB_PATH);
+  db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 

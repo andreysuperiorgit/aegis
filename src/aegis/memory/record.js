@@ -120,6 +120,21 @@ export function updateTokenStatus(address, status, priceUsd = null) {
   }
 }
 
+/**
+ * Write the final score back once the score engine has run.
+ *
+ * The scanner records a token the moment it sees it, before the weights
+ * are applied, so without this the row keeps a null verdict forever and
+ * deployer history reads as blanks.
+ */
+export function recordVerdict(address, score, verdict, sniped = false) {
+  const db = getDb();
+  db.prepare(
+    `UPDATE tokens SET first_score = ?, verdict = ?, sniped = ?
+     WHERE address = ?`,
+  ).run(score, verdict, sniped ? 1 : 0, address.toLowerCase());
+}
+
 export function flagWallet(address, chain, flag, note = "") {
   const db = getDb();
   const now = Date.now();

@@ -8,7 +8,7 @@ import { scanBaseToken } from "../scanners/base.scanner.js";
 import { getRugCheckReport } from "../scanners/rugcheck.js";
 import { calculateScore } from "../utils/score.js";
 import { analyzeWithGrok, isGrokEnabled } from "../ai/grok.js";
-import { initMemory, getStats, getDb } from "../memory/index.js";
+import { initMemory, getStats, getDb, recordVerdict } from "../memory/index.js";
 
 const log = createLogger("server");
 
@@ -49,6 +49,8 @@ export function createServer({ solanaMonitor, robinhoodMonitor, baseMonitor }) {
         try {
           const checks = await scanRobinhoodToken(d.token, process.env.ROBINHOOD_RPC_URL);
           const result = calculateScore(checks);
+      // [SECOND BRAIN] persist the verdict the engine just produced
+      try { recordVerdict(req.params.address, result.score, result.verdict); } catch {}
           broadcast("scanResult", { ...checks, ...result });
         } catch (err) { log.error("Auto-scan failed:", err.message); }
       }
@@ -63,6 +65,8 @@ export function createServer({ solanaMonitor, robinhoodMonitor, baseMonitor }) {
         try {
           const checks = await scanBaseToken(d.token, process.env.BASE_RPC_URL);
           const result = calculateScore(checks);
+      // [SECOND BRAIN] persist the verdict the engine just produced
+      try { recordVerdict(req.params.address, result.score, result.verdict); } catch {}
           broadcast("scanResult", { ...checks, ...result });
         } catch (err) { log.error("Base auto-scan failed:", err.message); }
       }
@@ -115,6 +119,8 @@ export function createServer({ solanaMonitor, robinhoodMonitor, baseMonitor }) {
     try {
       const checks = await scanSolanaToken(req.params.address, process.env.SOLANA_RPC_URL);
       const result = calculateScore(checks);
+      // [SECOND BRAIN] persist the verdict the engine just produced
+      try { recordVerdict(req.params.address, result.score, result.verdict); } catch {}
       let rugcheck = null;
       if (process.env.RUGCHECK_API_KEY) rugcheck = await getRugCheckReport(req.params.address);
       const scanData = { ...checks, ...result, rugcheck };
@@ -129,6 +135,8 @@ export function createServer({ solanaMonitor, robinhoodMonitor, baseMonitor }) {
     try {
       const checks = await scanRobinhoodToken(req.params.address, process.env.ROBINHOOD_RPC_URL);
       const result = calculateScore(checks);
+      // [SECOND BRAIN] persist the verdict the engine just produced
+      try { recordVerdict(req.params.address, result.score, result.verdict); } catch {}
       const scanData = { ...checks, ...result };
       if (isGrokEnabled()) scanData.grok = await analyzeWithGrok(scanData);
       res.json(scanData);
@@ -140,6 +148,8 @@ export function createServer({ solanaMonitor, robinhoodMonitor, baseMonitor }) {
     try {
       const checks = await scanBaseToken(req.params.address, process.env.BASE_RPC_URL);
       const result = calculateScore(checks);
+      // [SECOND BRAIN] persist the verdict the engine just produced
+      try { recordVerdict(req.params.address, result.score, result.verdict); } catch {}
       const scanData = { ...checks, ...result };
       if (isGrokEnabled()) scanData.grok = await analyzeWithGrok(scanData);
       res.json(scanData);
